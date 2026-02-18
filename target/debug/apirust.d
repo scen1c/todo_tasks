@@ -1,0 +1,1 @@
+/home/scen1c/unic/rustc_projects/apirust/target/debug/apirust: /home/scen1c/unic/rustc_projects/apirust/src/cli.rs /home/scen1c/unic/rustc_projects/apirust/src/main.rs /home/scen1c/unic/rustc_projects/apirust/src/task_service.rs
