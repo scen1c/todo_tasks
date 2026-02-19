@@ -1,6 +1,6 @@
 use sqlx::PgPool;
-use serde::{Deserialize, Serialize};
-#[derive(Clone,Serialize)]
+use serde::Serialize;
+#[derive(Debug, Clone,Serialize)]
 struct Task {
     pub id: i32,
     pub title: String,
