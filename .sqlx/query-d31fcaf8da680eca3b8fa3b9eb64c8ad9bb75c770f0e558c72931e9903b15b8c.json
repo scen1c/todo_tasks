@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tasks SET completed = true WHERE title = $1 AND user_name = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d31fcaf8da680eca3b8fa3b9eb64c8ad9bb75c770f0e558c72931e9903b15b8c"
+}

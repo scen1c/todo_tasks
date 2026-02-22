@@ -1,10 +1,11 @@
 use sqlx::PgPool;
-use serde::{Serialize, de::value::Error};
+use serde::{Serialize};
 #[derive(Debug, Clone,Serialize)]
 pub struct Task {
     pub id: i32,
     pub title: String,
     pub completed: bool,
+    pub user_name: String
 }
 #[derive(Debug, Clone,Serialize)]
 pub struct User {
@@ -12,21 +13,21 @@ pub struct User {
     pub password: String,
 }
 
-pub async fn create_task(pool: &PgPool, title: &str) -> Result<(), sqlx::Error> {
-    let query = "INSERT INTO tasks (title) VALUES ($1)";
-    sqlx::query(query).bind(&title).execute(pool).await?;
+pub async fn create_task(pool: &PgPool, title: &str, user_name: &str) -> Result<(), sqlx::Error> {
+    let query = "INSERT INTO tasks (title, user_name) VALUES ($1, $2)";
+    sqlx::query(query).bind(&title).bind(&user_name).execute(pool).await?;
 
     Ok(())
 }
 
-pub async fn list_tasks(pool: &PgPool) -> Result<Vec<Task>, sqlx::Error> {
-    let tasks = sqlx::query_as!(Task, "SELECT id, title, completed FROM tasks").fetch_all(pool).await?;
+pub async fn list_tasks(pool: &PgPool, name: &str) -> Result<Vec<Task>, sqlx::Error> {
+    let tasks = sqlx::query_as!(Task, "SELECT id, title, completed, user_name FROM tasks WHERE user_name = $1", name).fetch_all(pool).await?;
 
     Ok(tasks)
 }
 
-pub async fn finish_task(pool: &PgPool, title: &str) -> Result<(), sqlx::Error> {
-    sqlx::query!("UPDATE tasks SET completed = true WHERE title = $1", title).execute(pool).await?;
+pub async fn finish_task(pool: &PgPool, title: &str, name: &str) -> Result<(), sqlx::Error> {
+    sqlx::query!("UPDATE tasks SET completed = true WHERE title = $1 AND user_name = $2", title, name).execute(pool).await?;
 
     Ok(())
 
