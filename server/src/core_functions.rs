@@ -8,6 +8,7 @@ pub struct Task {
     pub user_name: String
 }
 #[derive(Debug, Clone,Serialize)]
+
 pub struct User {
     pub name: String,
     pub password: String,

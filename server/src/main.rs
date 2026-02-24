@@ -3,7 +3,8 @@ use axum::{
     http::{request::Parts, StatusCode},
     response::IntoResponse,
     routing::{get, post},
-    Json, Router, async_trait
+    Json, Router, 
+    async_trait
 };
 use sqlx::PgPool;
 use serde::{Serialize, Deserialize};
@@ -127,18 +128,26 @@ async fn alive() -> &'static str {
 
 async fn register(State(state): State<AppState>, Json(req): Json<RegisterRequest>) -> impl IntoResponse {
     if req.name.is_empty() || req.password.is_empty() {
-        return StatusCode::BAD_REQUEST
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "name and password required"}))).into_response()
+    }
+    let list = cf::list_users(&state.pool).await.unwrap();
+    let check = list
+        .iter()
+        .any(|a| a.name == req.name);
+    if check {
+        println!("Error of creating user {} cuz alrdy exist", &req.name);
+        return (StatusCode::CONFLICT, Json(serde_json::json!({"error": "User already exist!"}))).into_response()
     }
     
     let result = cf::create_user(&state.pool, &req.name, &req.password).await;
     match result  {
         Ok(_) => {
             println!("Added new user into DB");
-            StatusCode::CREATED
+            return (StatusCode::CREATED, Json(serde_json::json!({"Created": "User created"}))).into_response()
         },
         Err(_) => {
             println!("Error to create user");
-            StatusCode::INTERNAL_SERVER_ERROR
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "DB error"}))).into_response()
         }
     }
 
@@ -180,14 +189,7 @@ async fn login(State(state): State<AppState>, Json(log): Json<LoginRequest>) -> 
 
     };
 
-    (
-        StatusCode::OK,
-        Json(serde_json::json!({
-            "access_token": token,
-            "token_type": "Bearer"
-        })),
-    )
-        .into_response()
+    (StatusCode::OK, Json(serde_json::json!({"access_token": token, "token_type": "Bearer"}))).into_response()
 
 }
 

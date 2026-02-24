@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::{array::repeat, io::{self, Write}};
 use reqwest::Client;
 use serde::{Serialize, Deserialize};
 
@@ -8,6 +8,7 @@ struct RegisterRequest {
     name: String,
     password: String,
 }
+#[derive(Serialize, Debug)]
 struct LoginRequest {
     name: String,
     password: String,
@@ -34,16 +35,11 @@ pub async fn beginprogram(client: Client) {
     let answer = read_line("Do u have account?(y/n): ");
     let answer = answer.trim(); 
     match answer {
-        "y" => login_cli().await,
+        "y" => login_cli(client.clone()).await,
         "n" => regist_cli(client.clone()).await,
         _ => println!("Choose only y or n") 
     }
     }
-}
-
-
-async fn login_cli() {
-
 }
 
 pub async fn regist_cli(client: Client) {
@@ -65,4 +61,42 @@ pub async fn regist_cli(client: Client) {
             println!("Request failed: {}", err);
         }
     }
+}
+
+
+
+async fn login_cli(client: Client) {
+    let name = read_line("Enter ur name: ");
+    let password = read_line("Ener ur password: ");
+    let request = LoginRequest {
+        name: name.to_string(),
+        password: password.to_string(),
+    };
+    let response = client
+        .post("http://127.0.0.1:3030/auth/login")
+        .json(&request)
+        .send()
+        .await;
+    match response {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                let data: LoginResponse = resp.json().await.unwrap();
+                panel(client, data, name).await
+            }
+        }
+        Err(err) => {
+            println!("Request error: {}", err)
+        }
+    }
+}
+
+pub async fn panel(client: Client, jwt: LoginResponse, name: String) {
+    let a = "-".repeat(45);
+    println!("{a}
+Hello {name}!
+1
+2
+3
+{a}"
+    );
 }
