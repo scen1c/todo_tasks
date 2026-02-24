@@ -174,7 +174,7 @@ async fn login(State(state): State<AppState>, Json(log): Json<LoginRequest>) -> 
         },
         Err(err) =>{
             println!("Error to create jwt for user!");
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "token generation failed"}))).into_response()
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "token generation failed. The code: {err}"}))).into_response()
         }
         
 
