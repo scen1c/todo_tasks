@@ -14,7 +14,7 @@ struct LoginRequest {
     password: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 struct LoginResponse {
     access_token: String,
     token_type: String,
@@ -92,11 +92,40 @@ async fn login_cli(client: Client) {
 
 pub async fn panel(client: Client, jwt: LoginResponse, name: String) {
     let a = "-".repeat(45);
+    
+    loop {
     println!("{a}
 Hello {name}!
-1
-2
-3
+1 Create task
+2 list of tasks
+3 finish task
+4 Exit
 {a}"
-    );
+);
+    let input = read_line("Choose from 1 to 4: ");
+    let input: u8 = input
+        .trim()
+        .parse()
+        .unwrap();
+    match input {
+        1 => create_task_cli(client.clone(), jwt.clone()).await,
+        2 => list_task_cli().await,
+        3 => finish_task_cli().await,
+        4 => break,
+        _ => println!("Please choose from 1 to 4!")
+    }
+}
+}
+
+
+pub async fn create_task_cli(client: Client, jwt: LoginResponse) {
+
+}
+
+pub async fn list_task_cli() {
+
+}
+
+pub async fn finish_task_cli() {
+
 }

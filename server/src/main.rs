@@ -1,10 +1,7 @@
 use axum::{
-    extract::{FromRequestParts, State},
-    http::{request::Parts, StatusCode},
-    response::IntoResponse,
-    routing::{get, post},
-    Json, Router, 
-    async_trait
+    Json, Router, async_trait, extract::{FromRequestParts, State}, 
+    http::{StatusCode, request::Parts}, 
+    response::IntoResponse, routing::{get, post}
 };
 use sqlx::PgPool;
 use serde::{Serialize, Deserialize};
@@ -51,6 +48,11 @@ struct Claims {
 struct OkResponse {
     ok: bool,
 }
+#[derive(Debug, Deserialize)]
+struct TaskRequest {
+    title: String
+}
+
 fn make_jwt(username: &str, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let exp: i64 = (OffsetDateTime::now_utc() + Duration::minutes(30)).unix_timestamp();
 
@@ -115,6 +117,7 @@ async fn main() {
         .route("/alive", get(alive))
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
+        .route("/tasks", post(create_task_ser))
         .with_state(state);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3030").await.unwrap();
     axum::serve(listener, app).await.unwrap();
@@ -189,7 +192,29 @@ async fn login(State(state): State<AppState>, Json(log): Json<LoginRequest>) -> 
 
     };
 
-    (StatusCode::OK, Json(serde_json::json!({"access_token": token, "token_type": "Bearer"}))).into_response()
+    (StatusCode::OK, Json(LoginResponse {
+        acces_token: token,
+        token_type: "Bearer"
+        })).into_response()
 
 }
 
+async fn create_task_ser(State(state): State<AppState>, auth: UserAuth, Json(req): Json<TaskRequest>) -> impl IntoResponse {
+    if req.title.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "empty title"}))).into_response()
+    }
+    let result = cf::create_task(&state.pool, &req.title, &auth.name).await;
+
+    if let Err(err) = result {
+        println!("Error into DB to create task for {}", &auth.name);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "error to create task into db"})))
+            .into_response()
+    };
+    println!("Send to {} that his task  is created", &auth.name);
+    (StatusCode::CREATED, Json(OkResponse { ok: true})).into_response()
+}
+
+
+async fn list_task_ser(State(state): State<AppState>, auth: UserAuth) -> impl IntoResponse {
+
+}
