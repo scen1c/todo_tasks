@@ -1,5 +1,4 @@
-use std::{array::repeat, io::{self, Write}};
-use axum::{Error, http::Response};
+use std::io::{self, Write};
 use reqwest::Client;
 use serde::{Serialize, Deserialize};
 
@@ -25,7 +24,6 @@ struct LoginRequest {
 #[derive(Deserialize, Debug, Clone)]
 pub struct LoginResponse {
     access_token: String,
-    token_type: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -37,6 +35,12 @@ struct TaskRequest {
 struct ListTaskResponse {
     tasks: Vec<Task>
 }
+
+#[derive(Debug, Serialize)]
+struct FinishTaskRequest {
+    title: String
+}
+
 
 fn read_line(prompt: &str) -> String {
     print!("{prompt}");
@@ -128,7 +132,7 @@ Hello {name}!
     match input {
         1 => create_task_cli(client.clone(), jwt.clone()).await,
         2 => list_task_cli(client.clone(), jwt.clone()).await,
-        3 => finish_task_cli().await,
+        3 => finish_task_cli(client.clone(), jwt.clone()).await,
         4 => break,
         _ => println!("Please choose from 1 to 4!")
     }
@@ -172,7 +176,7 @@ pub async fn create_task_cli(client: Client, jwt: LoginResponse) {
 
 pub async fn list_task_cli(client: Client, jwt: LoginResponse) {
     let response = client
-        .post("http://127.0.0.1:3030/list")
+        .get("http://127.0.0.1:3030/list")
         .bearer_auth(&jwt.access_token)
         .send()
         .await;
@@ -202,6 +206,32 @@ pub async fn list_task_cli(client: Client, jwt: LoginResponse) {
     }
 }
 
-pub async fn finish_task_cli() {
-
+pub async fn finish_task_cli(client: Client, jwt: LoginResponse) {
+    let title = read_line("Which task didu finish td?: ");
+    let body = FinishTaskRequest {
+        title
+    };
+    let response = client
+        .post("http://127.0.0.1:3030/task/finish")
+        .bearer_auth(&jwt.access_token)
+        .json(&body)
+        .send()
+        .await;
+    match response {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                let text = resp.text()
+                    .await
+                    .unwrap();
+                println!("Task finished successfully! Code: {text}")
+            } else {
+                println!("Server returned an err {}", resp.status());
+                let text = resp.text().await.unwrap();
+                println!("Error body: {}", text)
+            }
+        },
+        Err(err) => {
+            println!("Request failed: {}", err)
+        }
+    }
 }

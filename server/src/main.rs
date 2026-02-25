@@ -52,6 +52,11 @@ struct OkResponse {
 struct TaskRequest {
     title: String
 }
+#[derive(Debug, Deserialize)]
+struct FinishTaskRequest {
+    title: String
+}
+
 
 #[derive(Debug, Serialize, Clone)]
 struct ListTaskResponse {
@@ -123,7 +128,8 @@ async fn main() {
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
         .route("/task", post(create_task_ser))
-        .route("/list", post(list_task_ser))
+        .route("/list", get(list_task_ser))
+        .route("/task/finish", post(finish_task_ser))
         .with_state(state);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3030").await.unwrap();
     axum::serve(listener, app).await.unwrap();
@@ -191,8 +197,8 @@ async fn login(State(state): State<AppState>, Json(log): Json<LoginRequest>) -> 
             t
         },
         Err(err) =>{
-            println!("Error to create jwt for user!");
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "token generation failed. The code: {err}"}))).into_response()
+            println!("Error to create jwt for user! Err: {}", err);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "token generation failed"}))).into_response()
         }
         
 
@@ -234,3 +240,20 @@ async fn list_task_ser(State(state): State<AppState>, auth: UserAuth ) -> impl I
         tasks: result
     })).into_response()
 }   
+
+
+async fn finish_task_ser(State(state): State<AppState>, auth: UserAuth, Json(req): Json<FinishTaskRequest>) -> impl IntoResponse {
+    if req.title.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "empty title"}))).into_response()
+    }
+    let name = auth.name.clone();
+    let result = cf::finish_task(&state.pool, &req.title, &auth.name).await;
+    if let Err(err) = result {
+        println!("Task not found of user {name}. Err: {err}");
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "error to finish task into db."})))
+            .into_response()
+    }
+    println!("Send to {} that his task is finished", name);
+
+    (StatusCode::OK, Json(OkResponse { ok: true})).into_response()
+}
