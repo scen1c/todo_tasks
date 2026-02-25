@@ -172,7 +172,7 @@ pub async fn create_task_cli(client: Client, jwt: LoginResponse) {
 
 pub async fn list_task_cli(client: Client, jwt: LoginResponse) {
     let response = client
-        .post("http://127.0.0.1/list")
+        .post("http://127.0.0.1:3030/list")
         .bearer_auth(&jwt.access_token)
         .send()
         .await;
@@ -181,11 +181,18 @@ pub async fn list_task_cli(client: Client, jwt: LoginResponse) {
             if resp.status().is_success() {
                 let data: ListTaskResponse  = resp.json()
                     .await
-                    .expect("Smth happened wrong")
-                    ;
+                    .expect("Smth happened wrong");
 
-                
-
+            println!("{:<5} | {:<20} | {:<10}", "ID", "TITLE", "COMPLETED");
+            println!("{}", "-".repeat(45));
+            for data in &data.tasks {
+                println!(
+        "{:<5} | {:<20} | {:<10}",
+        data.id,
+        data.title,
+        data.completed
+    );
+    }
             }
         },
 
