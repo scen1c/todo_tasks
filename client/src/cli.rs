@@ -1,7 +1,15 @@
 use std::{array::repeat, io::{self, Write}};
+use axum::{Error, http::Response};
 use reqwest::Client;
 use serde::{Serialize, Deserialize};
 
+#[derive(Debug, Clone,Serialize)]
+struct Task {
+     id: i32,
+     title: String,
+     completed: bool,
+     user_name: String
+}
 
 #[derive(serde::Serialize)]
 struct RegisterRequest {
@@ -15,9 +23,19 @@ struct LoginRequest {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct LoginResponse {
+pub struct LoginResponse {
     access_token: String,
     token_type: String,
+}
+
+#[derive(Debug, Serialize)]
+struct TaskRequest {
+    title: String
+}
+
+#[derive(Debug, Clone)]
+struct ListTaskResponse {
+    tasks: Vec<Task>
 }
 
 fn read_line(prompt: &str) -> String {
@@ -55,7 +73,7 @@ pub async fn regist_cli(client: Client) {
     let requesttosev = client.post("http://127.0.0.1:3030/auth/register").json(&request).send().await;
     match requesttosev {
         Ok(resp) => {
-            println!("Ur account created into DB!");
+            println!("Ur account created into DB! {resp:?}");
         }
         Err(err) => {
             println!("Request failed: {}", err);
@@ -119,6 +137,36 @@ Hello {name}!
 
 
 pub async fn create_task_cli(client: Client, jwt: LoginResponse) {
+    let title = read_line("Whats a new task u want add to ur list?: ");
+    let body = TaskRequest {
+        title
+    };
+    let response = client
+        .post("http://127.0.0.1:3030/task")
+        .bearer_auth(&jwt.access_token)
+        .json(&body)
+        .send()
+        .await;
+
+    match response {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                let text = resp.text()
+                    .await
+                    .unwrap();
+                println!("Task created successfully! Code: {text}")
+            } else {
+                println!("Server returned err status {}", resp.status());
+                let text = resp.text()
+                    .await
+                    .unwrap();
+                println!("Error body: {}", text);
+            }
+        },
+        Err(err) => {
+            println!("Request failed: {}", err)
+        }
+    }
 
 }
 

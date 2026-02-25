@@ -35,7 +35,7 @@ struct LoginRequest {
 }
 #[derive(Debug, Serialize, Deserialize)]
 struct LoginResponse {
-    acces_token: String,
+    access_token: String,
     token_type: &'static str,
 }
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,6 +51,11 @@ struct OkResponse {
 #[derive(Debug, Deserialize)]
 struct TaskRequest {
     title: String
+}
+
+#[derive(Debug, Serialize, Clone)]
+struct ListTaskResponse {
+    tasks: Vec<cf::Task>
 }
 
 fn make_jwt(username: &str, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
@@ -117,7 +122,8 @@ async fn main() {
         .route("/alive", get(alive))
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
-        .route("/tasks", post(create_task_ser))
+        .route("/task", post(create_task_ser))
+        .route("/list", post(list_task_ser))
         .with_state(state);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3030").await.unwrap();
     axum::serve(listener, app).await.unwrap();
@@ -193,7 +199,7 @@ async fn login(State(state): State<AppState>, Json(log): Json<LoginRequest>) -> 
     };
 
     (StatusCode::OK, Json(LoginResponse {
-        acces_token: token,
+        access_token: token,
         token_type: "Bearer"
         })).into_response()
 
@@ -204,17 +210,27 @@ async fn create_task_ser(State(state): State<AppState>, auth: UserAuth, Json(req
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "empty title"}))).into_response()
     }
     let result = cf::create_task(&state.pool, &req.title, &auth.name).await;
-
+    let name = &auth.name;
     if let Err(err) = result {
-        println!("Error into DB to create task for {}", &auth.name);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "error to create task into db"})))
+        println!("Error into DB to create task for {name}. Error {err}");
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "error to create task into db."})))
             .into_response()
     };
     println!("Send to {} that his task  is created", &auth.name);
     (StatusCode::CREATED, Json(OkResponse { ok: true})).into_response()
-}
+}                
 
+async fn list_task_ser(State(state): State<AppState>, auth: UserAuth ) -> impl IntoResponse {
+    let result  = cf::list_tasks(&state.pool, &auth.name).await;
+    let name = &auth.name;
+    if let Err(err) = result {                                                                                
+        println!("Error take list of task. User {name}, Error {err}");
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "error to take list of users's tasks"})))
+            .into_response()
+    }
+    let result = result.unwrap();
 
-async fn list_task_ser(State(state): State<AppState>, auth: UserAuth) -> impl IntoResponse {
-
-}
+    (StatusCode::CREATED, Json(ListTaskResponse {
+        tasks: result
+    })).into_response()
+}   
