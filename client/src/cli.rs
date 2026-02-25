@@ -3,7 +3,7 @@ use axum::{Error, http::Response};
 use reqwest::Client;
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone,Serialize)]
+#[derive(Debug, Clone,Serialize, Deserialize)]
 struct Task {
      id: i32,
      title: String,
@@ -33,7 +33,7 @@ struct TaskRequest {
     title: String
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 struct ListTaskResponse {
     tasks: Vec<Task>
 }
@@ -127,7 +127,7 @@ Hello {name}!
         .unwrap();
     match input {
         1 => create_task_cli(client.clone(), jwt.clone()).await,
-        2 => list_task_cli().await,
+        2 => list_task_cli(client.clone(), jwt.clone()).await,
         3 => finish_task_cli().await,
         4 => break,
         _ => println!("Please choose from 1 to 4!")
@@ -170,8 +170,29 @@ pub async fn create_task_cli(client: Client, jwt: LoginResponse) {
 
 }
 
-pub async fn list_task_cli() {
+pub async fn list_task_cli(client: Client, jwt: LoginResponse) {
+    let response = client
+        .post("http://127.0.0.1/list")
+        .bearer_auth(&jwt.access_token)
+        .send()
+        .await;
+    match response {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                let data: ListTaskResponse  = resp.json()
+                    .await
+                    .expect("Smth happened wrong")
+                    ;
 
+                
+
+            }
+        },
+
+        Err(err) => {
+            println!("Request failed: {}", err)
+        }
+    }
 }
 
 pub async fn finish_task_cli() {
