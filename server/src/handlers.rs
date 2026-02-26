@@ -159,6 +159,7 @@ pub async fn login(State(state): State<AppState>, Json(log): Json<LoginRequest>)
         }
     };
     if !ok {
+        println!("Expired token of user {}", log.name);
         return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "bad credentials"})))
             .into_response();
     }
@@ -209,6 +210,7 @@ pub async fn list_task_ser(State(state): State<AppState>, auth: UserAuth ) -> im
     }
     let result = result.unwrap();
 
+    println!("Sent the list of {}'s tasks", auth.name);
     (StatusCode::CREATED, Json(ListTaskResponse {
         tasks: result
     })).into_response()
@@ -227,6 +229,5 @@ pub async fn finish_task_ser(State(state): State<AppState>, auth: UserAuth, Json
             .into_response()
     }
     println!("Send to {} that his task is finished", name);
-
     (StatusCode::OK, Json(OkResponse { ok: true})).into_response()
 }
