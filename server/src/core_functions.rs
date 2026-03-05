@@ -65,33 +65,38 @@ pub async fn delete_task(pool: &PgPool, id: &i32, user_name: &str) -> Result<(),
     Ok(())
 }
 #[cfg(test)]
-mod test {
-    use axum::routing::get;
-    use sqlx::{Pool, Postgres};
-    use serde::{Serialize};
-#[derive(Debug, Clone,Serialize)]
-pub struct Task {
-    pub id: i32,
-    pub title: String,
-    pub completed: bool,
-    pub user_name: String
-}
+mod tests {
+    use super::*;
+    use sqlx::PgPool;
 
-#[derive(Debug, Clone,Serialize)]
+    static DBURL: &str = "postgres://postgres:1234@localhost:5432/tasks_test";
 
-pub struct User {
-    pub name: String,
-    pub password: String,
-}
-
-    static DBURL: &str = "postgres://postgres:1234@localhost:5432/tasks_db";
-    async fn get_pool() -> Pool<Postgres> {
-        sqlx::postgres::PgPool::connect(&DBURL).await.unwrap()
+    async fn get_pool() -> PgPool {
+        PgPool::connect(DBURL).await.unwrap()
     }
-    async fn create_user_test() {
+
+    #[tokio::test]
+    async fn test_create_user() {
         let pool = get_pool().await;
-        let user = "" ;
 
+        let name = format!("test_user_{}", rand::random::<u32>());
+        let password = "123";
+
+        create_user(&pool, &name, password).await.unwrap();
+
+        let users = list_users(&pool).await.unwrap();
+
+        assert!(users.iter().any(|u| u.name == name));
     }
-    
+    #[tokio::test]
+    async fn test_create_task() {
+        let pool = get_pool().await;
+        let title = format!("test_task_{}", rand::random::<u32>());
+        let user_name = "test_user";
+
+        create_task(&pool, &title, &user_name).await.unwrap();
+
+        let list = list_tasks(&pool, user_name).await.unwrap();
+        assert!(list.iter().any(|a| a.title == title));
+    }
 }

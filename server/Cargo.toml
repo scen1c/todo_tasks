@@ -13,3 +13,7 @@ dotenvy = "0.15"
 state = "0.6.0"
 jsonwebtoken = "9"
 time = "0.3"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+rand = "0.8"
