@@ -27,11 +27,13 @@ pub struct LoginRequest {
     name: String,
     password: String,
 }
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoginResponse {
     access_token: String,
     token_type: &'static str,
 }
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     sub: String,
@@ -42,19 +44,24 @@ pub struct Claims {
 pub struct OkResponse {
     ok: bool,
 }
+
 #[derive(Debug, Deserialize)]
 pub struct TaskRequest {
     title: String
 }
+
 #[derive(Debug, Deserialize)]
 pub struct FinishTaskRequest {
     title: String
 }
 
-
 #[derive(Debug, Serialize, Clone)]
 pub struct ListTaskResponse {
     tasks: Vec<cf::Task>
+}
+#[derive(Debug, Deserialize)]
+pub struct DeleteTaskRequest {
+    id: i32
 }
 
 pub fn make_jwt(username: &str, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
@@ -83,6 +90,7 @@ pub fn verify_jwt(token: &str, secret: &str) -> Result<Claims, jsonwebtoken::err
 pub struct UserAuth {
     name: String
 }
+
 #[async_trait]
 impl FromRequestParts<AppState> for UserAuth {
     type Rejection = (StatusCode, Json<serde_json::Value>);
@@ -106,9 +114,6 @@ impl FromRequestParts<AppState> for UserAuth {
     Ok(UserAuth { name: claims.sub }) }
 
 }
-
-
-
 
 pub async fn alive() -> &'static str {
     "Alive"
@@ -216,7 +221,6 @@ pub async fn list_task_ser(State(state): State<AppState>, auth: UserAuth ) -> im
     })).into_response()
 }   
 
-
 pub async fn finish_task_ser(State(state): State<AppState>, auth: UserAuth, Json(req): Json<FinishTaskRequest>) -> impl IntoResponse {
     if req.title.trim().is_empty() {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "empty title"}))).into_response()
@@ -229,5 +233,17 @@ pub async fn finish_task_ser(State(state): State<AppState>, auth: UserAuth, Json
             .into_response()
     }
     println!("Send to {} that his task is finished", name);
+    (StatusCode::OK, Json(OkResponse { ok: true})).into_response()
+}
+
+pub async fn delete_task_ser(State(state): State<AppState>, auth: UserAuth, Json(req): Json<DeleteTaskRequest>) -> impl IntoResponse {
+    let name = auth.name.clone();
+    let result = cf::delete_task(&state.pool, &req.id, &auth.name).await;
+    if let Err(err) = result {
+        println!("Task not found of user {name}. Err: {err}");
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "error to delete task into db."})))
+            .into_response()
+    }
+    println!("Send to {} that his task is deleted", name);
     (StatusCode::OK, Json(OkResponse { ok: true})).into_response()
 }

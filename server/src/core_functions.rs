@@ -27,8 +27,8 @@ pub async fn list_tasks(pool: &PgPool, name: &str) -> Result<Vec<Task>, sqlx::Er
     Ok(tasks)
 }
 
-pub async fn finish_task(pool: &PgPool, title: &str, name: &str) -> Result<(), sqlx::Error> {
-    sqlx::query!("UPDATE tasks SET completed = true WHERE title = $1 AND user_name = $2", title, name).execute(pool).await?;
+pub async fn finish_task(pool: &PgPool, title: &str, user_name: &str) -> Result<(), sqlx::Error> {
+    sqlx::query!("UPDATE tasks SET completed = true WHERE title = $1 AND user_name = $2", title, user_name).execute(pool).await?;
 
     Ok(())
 
@@ -58,3 +58,40 @@ pub async fn login_in(pool: &PgPool, name: &str, password: &str) -> Result<bool,
     }
 }
 
+pub async fn delete_task(pool: &PgPool, id: &i32, user_name: &str) -> Result<(), sqlx::Error>{
+    let query = "DELETE FROM tasks WHERE id = $1 and user_name = $2";
+    sqlx::query(query).bind(&id).bind(&user_name).execute(pool).await?;
+
+    Ok(())
+}
+#[cfg(test)]
+mod test {
+    use axum::routing::get;
+    use sqlx::{Pool, Postgres};
+    use serde::{Serialize};
+#[derive(Debug, Clone,Serialize)]
+pub struct Task {
+    pub id: i32,
+    pub title: String,
+    pub completed: bool,
+    pub user_name: String
+}
+
+#[derive(Debug, Clone,Serialize)]
+
+pub struct User {
+    pub name: String,
+    pub password: String,
+}
+
+    static DBURL: &str = "postgres://postgres:1234@localhost:5432/tasks_db";
+    async fn get_pool() -> Pool<Postgres> {
+        sqlx::postgres::PgPool::connect(&DBURL).await.unwrap()
+    }
+    async fn create_user_test() {
+        let pool = get_pool().await;
+        let user = "" ;
+
+    }
+    
+}

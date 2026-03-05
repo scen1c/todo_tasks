@@ -41,6 +41,10 @@ struct FinishTaskRequest {
     title: String
 }
 
+#[derive(Debug, Serialize)]
+struct DeleteTaskRequest {
+    id: i32
+}
 
 fn read_line(prompt: &str) -> String {
     print!("{prompt}");
@@ -85,8 +89,6 @@ pub async fn regist_cli(client: Client) {
     }
 }
 
-
-
 async fn login_cli(client: Client) {
     let name = read_line("Enter ur name: ");
     let password = read_line("Ener ur password: ");
@@ -121,10 +123,11 @@ Hello {name}!
 1 Create task
 2 list of tasks
 3 finish task
-4 Exit
+4 delete task
+5 Exit
 {a}"
 );
-    let input = read_line("Choose from 1 to 4: ");
+    let input = read_line("Choose from 1 to 5: ");
     let input: u8 = input
         .trim()
         .parse()
@@ -133,12 +136,12 @@ Hello {name}!
         1 => create_task_cli(client.clone(), jwt.clone()).await,
         2 => list_task_cli(client.clone(), jwt.clone()).await,
         3 => finish_task_cli(client.clone(), jwt.clone()).await,
-        4 => break,
+        4 => delete_task_cli(client.clone(), jwt.clone()).await,
+        5 => break,
         _ => println!("Please choose from 1 to 4!")
     }
 }
 }
-
 
 pub async fn create_task_cli(client: Client, jwt: LoginResponse) {
     let title = read_line("Whats a new task u want add to ur list?: ");
@@ -232,6 +235,38 @@ pub async fn finish_task_cli(client: Client, jwt: LoginResponse) {
         },
         Err(err) => {
             println!("Request failed: {}", err)
+        }
+    }
+}
+
+pub async fn delete_task_cli(client: Client, jwt: LoginResponse) {
+    let id = read_line("Which task want u delete? Please write id of the task: ");
+    let id: i32 = id.parse().unwrap();
+    let body = DeleteTaskRequest {
+        id
+    };
+    let response = client
+        .post("http://127.0.0.1:3030/task/delete")
+        .bearer_auth(&jwt.access_token)
+        .json(&body)
+        .send()
+        .await;
+    match response {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                let text = resp.text()
+                    .await
+                    .unwrap();
+                println!("Task successfully deleted! Code: {}", text);
+                
+            } else {
+                println!("Server returned an err: {}", resp.status());
+                let text = resp.text().await.unwrap();
+                println!("Error body: {}", text);
+            }
+        },
+        Err(err) => {
+            println!("Request failed : {}", err)
         }
     }
 }

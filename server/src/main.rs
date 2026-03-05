@@ -4,15 +4,9 @@ use axum::{
 };
 use dotenvy::dotenv;
 
-
-
-
 mod core_functions;
-
 mod handlers;
 use handlers as hl;
-
-
 
 #[tokio::main]
 async fn main() {
@@ -29,6 +23,7 @@ async fn main() {
         .route("/task", post(hl::create_task_ser))
         .route("/list", get(hl::list_task_ser))
         .route("/task/finish", post(hl::finish_task_ser))
+        .route("/task/delete", post(hl::delete_task_ser))
         .with_state(state);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3030").await.unwrap();
     axum::serve(listener, app).await.unwrap();
