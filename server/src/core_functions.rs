@@ -67,6 +67,7 @@ pub async fn delete_task(pool: &PgPool, id: &i32, user_name: &str) -> Result<(),
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::routing::get;
     use sqlx::PgPool;
 
     static DBURL: &str = "postgres://postgres:1234@localhost:5432/tasks_test";
@@ -98,5 +99,20 @@ mod tests {
 
         let list = list_tasks(&pool, user_name).await.unwrap();
         assert!(list.iter().any(|a| a.title == title));
+    }
+
+    #[tokio::test]
+    async fn test_finish_task() {
+        let pool = get_pool().await;
+        let title = format!("test_task_for_fin_{}", rand::random::<u32>());
+        let user_name = "test_user";
+        
+        create_task(&pool, &title, &user_name).await.unwrap();
+        finish_task(&pool, &title, &user_name).await.unwrap();
+        let list = list_tasks(&pool, &user_name).await.unwrap();
+
+        let find_task = list.iter().any(|a| a.title == title);
+        assert_eq!(find_task, true);
+
     }
 }

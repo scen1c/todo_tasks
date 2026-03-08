@@ -1,6 +1,6 @@
 [workspace]
 members = [
   "server",
-  "client",
+  "client", "slint-cli",
 ]
 resolver = "2"
