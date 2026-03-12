@@ -10,6 +10,7 @@ pub struct Task {
 #[derive(Debug, Clone,Serialize)]
 
 pub struct User {
+    pub id: i32,
     pub name: String,
     pub password: String,
 }
@@ -42,20 +43,9 @@ pub async fn create_user(pool: &PgPool, name: &str, password: &str) -> Result<()
 }
 
 pub async fn list_users(pool: &PgPool) -> Result<Vec<User>, sqlx::Error> {
-    let users = sqlx::query_as!(User, "SELECT name, password FROM users").fetch_all(pool).await?;
+    let users = sqlx::query_as!(User, "SELECT id, name, password FROM users").fetch_all(pool).await?;
 
     Ok(users)
-}
-
-
-pub async fn login_in(pool: &PgPool, name: &str, password: &str) -> Result<bool, sqlx::Error> {
-    let users = list_users(pool).await?;
-
-    if let Some(user) = users.iter().find(|u| u.name == name) {
-        Ok(user.password == password)
-    } else {
-        Ok(false)
-    }
 }
 
 pub async fn delete_task(pool: &PgPool, id: &i32, user_name: &str) -> Result<(), sqlx::Error>{
@@ -63,6 +53,17 @@ pub async fn delete_task(pool: &PgPool, id: &i32, user_name: &str) -> Result<(),
     sqlx::query(query).bind(&id).bind(&user_name).execute(pool).await?;
 
     Ok(())
+}
+
+pub async fn check_user(pool: &PgPool, name: &str, password: &str) -> Result<bool, sqlx::Error> {
+    let found= sqlx::query_as!(User,"SELECT * FROM users WHERE name = $1", name).fetch_one(pool).await?;
+
+    if found.password == password {
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+
 }
 #[cfg(test)]
 mod tests {

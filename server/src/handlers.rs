@@ -151,7 +151,7 @@ pub async fn login(State(state): State<AppState>, Json(log): Json<LoginRequest>)
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "name and password required"}))).into_response();
     }
 
-    let result = cf::login_in(&state.pool, &log.name, &log.password).await;
+    let result = cf::check_user(&state.pool, &log.name, &log.password).await;
     let ok = match result  {
         Ok(authcorrect) => {
             println!("Logged into account {}", log.name);
