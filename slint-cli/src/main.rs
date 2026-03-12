@@ -1,6 +1,16 @@
+use reqwest::Client;
+mod cli_slint;
+
+use cli_slint as cli;
 slint::include_modules!();
 
-fn main() {
+#[tokio::main]
+async fn main() {
+    let client = Client::new();
     let app = AppWindow::new().unwrap();
+
+    cli::beginprogram(client, &app);
+
     app.run().unwrap();
+
 }

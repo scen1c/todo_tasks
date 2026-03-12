@@ -1,12 +1,53 @@
-export component AppWindow inherits Window {
-    width: 400px;
-    height: 300px;
-    title: "Todo App";
+import { VerticalBox, LineEdit, Button } from "std-widgets.slint";
 
-    Text {
-        text: "Hello from Slint";
-        font-size: 24px;
-        horizontal-alignment: center;
-        vertical-alignment: center;
+export component AppWindow inherits Window {
+    width: 500px;
+    height: 300px;
+    title: "Todo Task Manager";
+
+    in-out property <string> login_text;
+    in-out property <string> password_text;
+    in-out property <string> status_text;
+
+    callback login_clicked;
+    callback register_clicked;
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 12px;
+
+        Text {
+            text: "Welcome on todo task!";
+            font-size: 20px;
+        }
+
+        LineEdit {
+            placeholder-text: "Login";
+            text <=> root.login_text;
+        }
+
+        LineEdit {
+            placeholder-text: "Password";
+            text <=> root.password_text;
+            input-type: password;
+        }
+
+        Button {
+            text: "Log in";
+            clicked => {
+                root.login_clicked();
+            }
+        }
+
+        Button {
+            text: "Register";
+            clicked => {
+                root.register_clicked();
+            }
+        }
+
+        Text {
+            text: root.status_text;
+        }
     }
 }
