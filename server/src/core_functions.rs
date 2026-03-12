@@ -68,7 +68,6 @@ pub async fn check_user(pool: &PgPool, name: &str, password: &str) -> Result<boo
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::routing::get;
     use sqlx::PgPool;
 
     static DBURL: &str = "postgres://postgres:1234@localhost:5432/tasks_test";

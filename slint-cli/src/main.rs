@@ -1,5 +1,6 @@
 use reqwest::Client;
 mod cli_slint;
+mod reqwest_functions;
 
 use cli_slint as cli;
 slint::include_modules!();

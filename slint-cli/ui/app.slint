@@ -1,4 +1,4 @@
-import { VerticalBox, LineEdit, Button } from "std-widgets.slint";
+import { VerticalBox, LineEdit, Button, ScrollView, CheckBox } from "std-widgets.slint";
 
 export component WelcomeWindow inherits Window {
     width: 500px;
@@ -97,6 +97,81 @@ export component RegisterWindow inherits Window {
 
         Text {
             text: root.status_text;
+        }
+    }
+}
+
+export component UserWindow inherits Window {
+    width: 700px;
+    height: 900px;
+    background: #3e3e3e;
+    title: "Tasks";
+
+    in-out property <string> create_task;
+    in property <[string]> tasks;
+    in-out property <string> status_text;
+
+    callback create_task_clicked();
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 12px;
+
+        Text {
+            text: "Tasks";
+            font-size: 20px;
+            horizontal-alignment: center;
+            height: 40px;
+            color: #ffffff;
+        }
+
+        LineEdit {
+            text <=> root.create_task;
+            placeholder-text: "New task";
+            height: 50px;
+        }
+
+        Button {
+            text: "Create task";
+            height: 45px;
+            clicked => {
+                root.create_task_clicked();
+            }
+        }
+
+        Text {
+            text: root.status_text;
+            color: #ffffff;
+            height: 30px;
+        }
+
+        ScrollView {
+            VerticalLayout {
+                spacing: 10px;
+
+                for task in tasks : Rectangle {
+                    height: 40px;
+                    background: #4a4a4a;
+                    border-radius: 6px;
+
+                    HorizontalLayout {
+                        padding: 8px;
+                        spacing: 10px;
+
+                        CheckBox {
+                            checked: false;
+                            vertical-stretch: 0;
+                        }
+
+                        Text {
+                            text: task;
+                            color: #ffffff;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+                    }
+                }
+            }
         }
     }
 }
