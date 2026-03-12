@@ -1,7 +1,9 @@
-use std::io::{self, Write};
+use std::{cell::Ref, io::{self, Write}};
 use reqwest::Client;
 use serde::{Serialize, Deserialize};
-use crate::AppWindow;
+use std::cell::RefCell;
+use std::rc::Rc;
+use crate::{WelcomeWindow, RegisterWindow};
 use slint::ComponentHandle;
 #[derive(Debug, Clone,Serialize, Deserialize)]
 struct Task {
@@ -56,12 +58,12 @@ fn read_line(prompt: &str) -> String {
     s.trim().to_string()
 }
 
-pub fn beginprogram(client: Client, app: &AppWindow) {
-    let app_weak = app.as_weak();
+pub fn beginprogram(client: Client, app: &WelcomeWindow) {
+    let login_weak = app.as_weak();
     let login_client = client.clone();
 
     app.on_login_clicked(move || {
-        let app = app_weak.unwrap();
+        let app = login_weak.unwrap();
 
         let name = app.get_login_text().to_string();
         let password = app.get_password_text().to_string();
@@ -78,9 +80,6 @@ pub fn beginprogram(client: Client, app: &AppWindow) {
                         let app = app_weak_inner.unwrap();
                         app.set_status_text("Login successful".into());
                     });
-
-                    // Если хочешь потом открыть panel:
-                    // panel(client, data, name).await;
                     let _ = data;
                 }
                 Err(err) => {
@@ -93,11 +92,37 @@ pub fn beginprogram(client: Client, app: &AppWindow) {
         });
     });
 
-    let app_weak = app.as_weak();
+    let register_weak = app.as_weak();
     let register_client = client.clone();
+    let register_window: Rc<RefCell<Option<RegisterWindow>>> = Rc::new(RefCell::new(None));
+    let register_window_clone = register_window.clone();
 
     app.on_register_clicked(move || {
-        let app = app_weak.unwrap();
+        let app = register_weak.unwrap();
+        open_register_window(register_client.clone(), &app, register_window_clone.clone());
+}); 
+}
+
+pub fn open_register_window(
+    client: Client,
+    welcome_app: &WelcomeWindow,
+    register_window: Rc<RefCell<Option<RegisterWindow>>>,
+) {
+    let window = RegisterWindow::new().unwrap();
+
+    setup_register_window_logic(client, &window);
+
+    window.show().unwrap();
+
+    *register_window.borrow_mut() = Some(window);
+    
+}
+pub fn setup_register_window_logic(client: Client, register_app: &RegisterWindow) {
+    let register_weak = register_app.as_weak();
+    let register_client = client.clone();
+
+    register_app.on_register_clicked(move || {
+        let app = register_weak.unwrap();
 
         let name = app.get_login_text().to_string();
         let password = app.get_password_text().to_string();
@@ -113,6 +138,8 @@ pub fn beginprogram(client: Client, app: &AppWindow) {
                     let _ = slint::invoke_from_event_loop(move || {
                         let app = app_weak_inner.unwrap();
                         app.set_status_text(message.into());
+
+                        app.hide().unwrap();
                     });
                 }
                 Err(err) => {

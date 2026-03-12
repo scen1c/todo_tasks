@@ -1,6 +1,6 @@
 import { VerticalBox, LineEdit, Button } from "std-widgets.slint";
 
-export component AppWindow inherits Window {
+export component WelcomeWindow inherits Window {
     width: 500px;
     height: 300px;
     title: "Todo Task Manager";
@@ -38,6 +38,55 @@ export component AppWindow inherits Window {
                 root.login_clicked();
             }
         }
+
+        Button {
+            text: "Register";
+            clicked => {
+                root.register_clicked();
+            }
+        }
+
+        Text {
+            text: root.status_text;
+        }
+    }
+}
+
+
+export component RegisterWindow inherits Window {
+    width: 500px;
+    always-on-top: true;
+    background: #3e3e3e;
+    height: 300px;
+    title: "Registration";
+
+    in-out property <string> login_text;
+    in-out property <string> password_text;
+    in-out property <string> status_text;
+
+    callback register_clicked;
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 12px;
+
+        Text {
+            text: "Please write ur name and password";
+            color: #ffffff;
+            font-size: 20px;
+        }
+
+        LineEdit {
+            placeholder-text: "Ur name";
+            text <=> root.login_text;
+        }
+
+        LineEdit {
+            placeholder-text: "Ur password";
+            text <=> root.password_text;
+            input-type: password;
+        }
+
 
         Button {
             text: "Register";

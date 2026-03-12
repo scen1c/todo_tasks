@@ -7,7 +7,7 @@ slint::include_modules!();
 #[tokio::main]
 async fn main() {
     let client = Client::new();
-    let app = AppWindow::new().unwrap();
+    let app = WelcomeWindow::new().unwrap();
 
     cli::beginprogram(client, &app);
 
