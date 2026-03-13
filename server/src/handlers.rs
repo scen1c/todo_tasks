@@ -131,7 +131,6 @@ pub async fn register(State(state): State<AppState>, Json(req): Json<RegisterReq
         println!("Error of creating user {} cuz alrdy exist", &req.name);
         return (StatusCode::CONFLICT, Json(serde_json::json!({"error": "User already exist!"}))).into_response()
     }
-    
     let result = cf::create_user(&state.pool, &req.name, &req.password).await;
     match result  {
         Ok(_) => {
@@ -146,48 +145,59 @@ pub async fn register(State(state): State<AppState>, Json(req): Json<RegisterReq
 
 }
 
-pub async fn login(State(state): State<AppState>, Json(log): Json<LoginRequest>) -> impl IntoResponse {
+pub async fn login(
+    State(state): State<AppState>,
+    Json(log): Json<LoginRequest>
+) -> impl IntoResponse {
     if log.name.is_empty() || log.password.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "name and password required"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "name and password required"}))
+        ).into_response();
     }
 
-    let result = cf::check_user(&state.pool, &log.name, &log.password).await;
-    let ok = match result  {
-        Ok(authcorrect) => {
-            println!("Logged into account {}", log.name);
-            authcorrect
-        },
+    let ok = match cf::check_user(&state.pool, &log.name, &log.password).await {
+        Ok(authcorrect) => authcorrect,
         Err(err) => {
-            println!("Error to create user");
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": format!("DB error: {err}")})))
-                .into_response();
+            println!("Error checking user: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": format!("DB error: {err}")}))
+            ).into_response();
         }
     };
+
     if !ok {
-        println!("Expired token of user {}", log.name);
-        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "bad credentials"})))
-            .into_response();
+        println!("Bad credentials for user {}", log.name);
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({"error": "bad credentials"}))
+        ).into_response();
     }
 
+    println!("Logged into account {}", log.name);
 
     let token = match make_jwt(&log.name, &state.jwt_secret) {
         Ok(t) => {
-            println!("Created jwt to user and returned");
+            println!("Created jwt for user {}", log.name);
             t
-        },
-        Err(err) =>{
-            println!("Error to create jwt for user! Err: {}", err);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "token generation failed"}))).into_response()
         }
-        
-
+        Err(err) => {
+            println!("Error creating jwt for user {}: {}", log.name, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "token generation failed"}))
+            ).into_response();
+        }
     };
 
-    (StatusCode::OK, Json(LoginResponse {
-        access_token: token,
-        token_type: "Bearer"
-        })).into_response()
-
+    (
+        StatusCode::OK,
+        Json(LoginResponse {
+            access_token: token,
+            token_type: "Bearer",
+        })
+    ).into_response()
 }
 
 pub async fn create_task_ser(State(state): State<AppState>, auth: UserAuth, Json(req): Json<TaskRequest>) -> impl IntoResponse {

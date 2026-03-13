@@ -1,4 +1,3 @@
-use axum::http::response;
 use reqwest::Client;
 use serde::{Serialize, Deserialize};
 
@@ -47,6 +46,7 @@ struct DeleteTaskRequest {
 }
 
 pub async fn regist_user(client: Client, name: String, password: String) -> Result<String, String> {
+    
     let request = RegisterRequest { name, password };
 
     let response = client
@@ -68,7 +68,8 @@ pub async fn regist_user(client: Client, name: String, password: String) -> Resu
 }
 
 pub async fn login_user(client: Client, name: String, password: String) -> Result<LoginResponse, String> {
-    let request = LoginRequest { name: name.clone(), password };
+
+    let request = LoginRequest { name: name.clone(), password};
 
     let response = client
         .post("http://127.0.0.1:3030/auth/login")

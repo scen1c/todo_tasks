@@ -6,6 +6,8 @@ use dotenvy::dotenv;
 
 mod core_functions;
 mod handlers;
+mod hash;
+
 use handlers as hl;
 
 #[tokio::main]

@@ -13,6 +13,9 @@ dotenvy = "0.15"
 state = "0.6.0"
 jsonwebtoken = "9"
 time = "0.3"
+argon2 = { version = "0.5.3", features = ["rand"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

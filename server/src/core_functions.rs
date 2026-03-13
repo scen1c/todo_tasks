@@ -1,5 +1,6 @@
 use sqlx::PgPool;
 use serde::{Serialize};
+use crate::hash as hh;
 #[derive(Debug, Clone,Serialize)]
 pub struct Task {
     pub id: i32,
@@ -36,8 +37,11 @@ pub async fn finish_task(pool: &PgPool, title: &str, user_name: &str) -> Result<
 }
 
 pub async fn create_user(pool: &PgPool, name: &str, password: &str) -> Result<(), sqlx::Error> {
+    
+    let hash_password = hh::hash_password(password).map_err(|_| sqlx::Error::Protocol("Hashing error".into()))?;
+
     let query = "INSERT INTO users (name, password) VALUES ($1, $2)";
-    sqlx::query(query).bind(&name).bind(&password).execute(pool).await?;
+    sqlx::query(query).bind(&name).bind(&hash_password).execute(pool).await?;
 
     Ok(())
 }
@@ -56,14 +60,21 @@ pub async fn delete_task(pool: &PgPool, id: &i32, user_name: &str) -> Result<(),
 }
 
 pub async fn check_user(pool: &PgPool, name: &str, password: &str) -> Result<bool, sqlx::Error> {
-    let found= sqlx::query_as!(User,"SELECT * FROM users WHERE name = $1", name).fetch_one(pool).await?;
+    let found = sqlx::query_as!(
+        User,
+        "SELECT id, name, password FROM users WHERE name = $1",
+        name
+    )
+    .fetch_optional(pool)
+    .await?;
 
-    if found.password == password {
-        Ok(true)
-    } else {
-        Ok(false)
-    }
+    let Some(found) = found else {
+        return Ok(false);
+    };
 
+    let ok = hh::verify_password(password, &found.password);
+
+    Ok(ok)
 }
 #[cfg(test)]
 mod tests {
