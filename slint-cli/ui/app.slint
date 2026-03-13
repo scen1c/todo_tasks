@@ -103,7 +103,7 @@ export component RegisterWindow inherits Window {
 
 export component UserWindow inherits Window {
     width: 700px;
-    height: 900px;
+    height: 800px;
     background: #3e3e3e;
     title: "Tasks";
 
@@ -173,5 +173,19 @@ export component UserWindow inherits Window {
                 }
             }
         }
+
+        Rectangle {
+        vertical-stretch: 1;
+    }
+
+    LineEdit {
+        placeholder-text: "Task id to delete";
+        height: 45px;
+    }
+
+    Button {
+        text: "Delete task";
+        height: 45px;
+    }
     }
 }
