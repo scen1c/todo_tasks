@@ -74,10 +74,44 @@ pub fn open_register_window(client: Client, _welcome_app: &WelcomeWindow) {
 }
 pub fn open_user_panel(client: Client, token: String, welcome_app: &WelcomeWindow) {
     let window = UserWindow::new().unwrap();
+    let window_weak = window.as_weak();
 
-    setup_user_window_logic(client, token, &window);
+    setup_user_window_logic(client.clone(), token.clone(), &window);
 
     window.show().unwrap();
+
+    let client_inner = client.clone();
+    let token_inner = token.clone();
+    let window_inner = window_weak.clone();
+
+    window.on_create_task_clicked(move || {
+        let app_weak = window_inner.clone();
+        let app_weak_for_ui = app_weak.clone();
+        let token = token_inner.clone();
+        let client = client_inner.clone();
+
+        let title = {
+            let app = app_weak.unwrap();
+            app.get_create_task().to_string()
+        };
+
+        tokio::spawn(async move {
+            let result = rf::create_task(client, token, title).await;
+
+            let _ = slint::invoke_from_event_loop(move || {
+                let app = app_weak_for_ui.unwrap();
+                match result {
+                    Ok(_) => {
+                        app.set_status_text("Task created successfully".into());
+                        app.set_create_task("".into());
+                    }
+                    Err(err) => {
+                        app.set_status_text(format!("Error: {}", err).into());
+                    }
+                }
+            });
+        });
+    });
 
     USER_WINDOW_HOLDER.with(|slot| {
         *slot.borrow_mut() = Some(window);

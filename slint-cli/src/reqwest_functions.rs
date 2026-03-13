@@ -1,3 +1,4 @@
+use axum::http::response;
 use reqwest::Client;
 use serde::{Serialize, Deserialize};
 
@@ -107,44 +108,13 @@ pub async fn get_tasks(token: &str) -> Result<ListTaskResponse, reqwest::Error> 
 }
 
 
-
-/*pub async fn panel(client: Client, jwt: LoginResponse, name: String) {
-    let a = "-".repeat(45);
-    
-    loop {
-    println!("{a}
-Hello {name}!
-1 Create task
-2 list of tasks
-3 finish task
-4 delete task
-5 Exit
-{a}"
-);
-    let input = read_line("Choose from 1 to 5: ");
-    let input: u8 = input
-        .trim()
-        .parse()
-        .unwrap();
-    match input {
-        1 => create_task_cli(client.clone(), jwt.clone()).await,
-        2 => list_task_cli(client.clone(), jwt.clone()).await,
-        3 => finish_task_cli(client.clone(), jwt.clone()).await,
-        4 => delete_task_cli(client.clone(), jwt.clone()).await,
-        5 => break,
-        _ => println!("Please choose from 1 to 4!")
-    }
-}
-}
-
-pub async fn create_task_cli(client: Client, jwt: LoginResponse) {
-    let title = read_line("Whats a new task u want add to ur list?: ");
+pub async fn create_task(client: Client, jwt_token_acces: String, title: String) -> Result<bool, String> {
     let body = TaskRequest {
         title
     };
     let response = client
         .post("http://127.0.0.1:3030/task")
-        .bearer_auth(&jwt.access_token)
+        .bearer_auth(&jwt_token_acces)
         .json(&body)
         .send()
         .await;
@@ -152,57 +122,16 @@ pub async fn create_task_cli(client: Client, jwt: LoginResponse) {
     match response {
         Ok(resp) => {
             if resp.status().is_success() {
-                let text = resp.text()
-                    .await
-                    .unwrap();
-                println!("Task created successfully! Code: {text}")
+                Ok(true)
             } else {
-                println!("Server returned err status {}", resp.status());
-                let text = resp.text()
-                    .await
-                    .unwrap();
-                println!("Error body: {}", text);
+                Err(format!("Register failed: {}", resp.status()))
             }
-        },
-        Err(err) => {
-            println!("Request failed: {}", err)
         }
+        Err(err) => Err(format!("Request failed: {}", err)),
     }
+}   
 
-}
-
-pub async fn list_task_cli(client: Client, jwt: LoginResponse) {
-    let response = client
-        .get("http://127.0.0.1:3030/list")
-        .bearer_auth(&jwt.access_token)
-        .send()
-        .await;
-    match response {
-        Ok(resp) => {
-            if resp.status().is_success() {
-                let data: ListTaskResponse  = resp.json()
-                    .await
-                    .expect("Smth happened wrong");
-
-            println!("{:<5} | {:<20} | {:<10}", "ID", "TITLE", "COMPLETED");
-            println!("{}", "-".repeat(45));
-            for data in &data.tasks {
-                println!(
-        "{:<5} | {:<20} | {:<10}",
-        data.id,
-        data.title,
-        data.completed
-    );
-    }
-            }
-        },
-
-        Err(err) => {
-            println!("Request failed: {}", err)
-        }
-    }
-}
-pub async fn finish_task_cli(client: Client, jwt: LoginResponse) {
+/*pub async fn finish_task_cli(client: Client, jwt: LoginResponse) {
     let title = read_line("Which task didu finish td?: ");
     let body = FinishTaskRequest {
         title
