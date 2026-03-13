@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone,Serialize, Deserialize)]
 pub struct Task {
-    id: i32,
+    pub id: i32,
     pub title: String,
     completed: bool,
     user_name: String
@@ -124,12 +124,36 @@ pub async fn create_task(client: Client, jwt_token_acces: String, title: String)
             if resp.status().is_success() {
                 Ok(true)
             } else {
-                Err(format!("Register failed: {}", resp.status()))
+                Err(format!("Create failed: {}", resp.status()))
             }
         }
         Err(err) => Err(format!("Request failed: {}", err)),
     }
 }   
+
+pub async fn delete_task(client: Client, jwt_token_access: String, id: String) -> Result<bool, String> {
+    let new_id = id.parse().unwrap();
+    let body = DeleteTaskRequest {
+        id: new_id
+    };
+    let response = client
+    .post("http://127.0.0.1:3030/task/delete")
+    .bearer_auth(&jwt_token_access)
+    .json(&body)
+    .send()
+    .await;
+
+    match response {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                Ok(true)
+            } else {
+                Err(format!("Delete failed: {}", resp.status()))
+            }
+        }
+        Err(err) => Err(format!("Request failed: {}", err)),
+    }
+}
 
 /*pub async fn finish_task_cli(client: Client, jwt: LoginResponse) {
     let title = read_line("Which task didu finish td?: ");

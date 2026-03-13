@@ -93,14 +93,14 @@ pub fn open_user_panel(client: Client, token: String, welcome_app: &WelcomeWindo
 
     setup_user_window_logic(token.clone());
 
-    let client_inner = client.clone();
-    let token_inner = token.clone();
-    let window_inner = window_weak.clone();
+    let client_for_create = client.clone();
+    let token_for_create = token.clone();
+    let window_for_create = window_weak.clone();
 
     window.on_create_task_clicked(move || {
-        let app_weak = window_inner.clone();
-        let token = token_inner.clone();
-        let client = client_inner.clone();
+        let app_weak = window_for_create.clone();
+        let token = token_for_create.clone();
+        let client = client_for_create.clone();
 
         let title = {
             let Some(app) = app_weak.upgrade() else {
@@ -140,6 +140,55 @@ pub fn open_user_panel(client: Client, token: String, welcome_app: &WelcomeWindo
                     });
                 }
             }
+        });
+    });
+
+    let client_for_delete = client.clone();
+    let token_for_delete = token.clone();
+    let window_for_delete = window_weak.clone();
+
+    window.on_delete_task_clicked(move || {
+        let client = client_for_delete.clone();
+        let token = token_for_delete.clone();
+        let app_weak = window_for_delete.clone();
+
+        let id_raw = {
+            let Some(app) = app_weak.upgrade() else {
+                return;
+            };
+            app.get_delete_task().to_string()
+        };
+
+        tokio::spawn(async move {
+           let result = rf::delete_task(client, token.clone(), id_raw).await; 
+
+           match result {
+                Ok(_) => {
+                    let reload_result = load_tasks_into_model(token.clone()).await;
+                    
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(app) = app_weak.upgrade() {
+                            match reload_result {
+                                Ok(_) => {
+                                    app.set_status_text("Task deleted successfuly".into());
+                                    app.set_delete_task("".into());
+                                },
+                                Err(err) => {
+                                    app.set_status_text(format!("Task deleted but couldn't refresh. {}", err).into());
+                                }
+                            }
+                        }
+                    });
+                },
+
+                Err(err) => {
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(app) = app_weak.upgrade() {
+                            app.set_status_text(format!("Error to delete task. Error code: {}", err).into());
+                        }
+                    });
+                }
+           }
         });
     });
 
@@ -213,10 +262,10 @@ pub async fn load_tasks_into_model(token: String) -> Result<(), reqwest::Error> 
     let data: rf::ListTaskResponse = rf::get_tasks(&token).await?;
 
     let tasks: Vec<SharedString> = data
-        .tasks
-        .into_iter()
-        .map(|t| SharedString::from(t.title))
-        .collect();
+    .tasks
+    .into_iter()
+    .map(|t| SharedString::from(format!("{}: {}", t.id, t.title)))
+    .collect();
 
     let _ = slint::invoke_from_event_loop(move || {
         TASKS_MODEL_HOLDER.with(|slot| {
