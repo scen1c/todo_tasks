@@ -101,17 +101,20 @@ export component RegisterWindow inherits Window {
     }
 }
 
+import { VerticalBox, LineEdit, Button, ScrollView, CheckBox } from "std-widgets.slint";
+
 export component UserWindow inherits Window {
     width: 700px;
-    height: 800px;
+    height: 900px;
     background: #3e3e3e;
     title: "Tasks";
 
     in-out property <string> create_task;
-    in property <[string]> tasks;
+    in property <[string]> tasks: ["Tatat", "asd", "asdasd", "itit"];
     in-out property <string> status_text;
-
+    in-out property <string> delete_task;
     callback create_task_clicked();
+    callback delete_task_clicked();
 
     VerticalLayout {
         padding: 20px;
@@ -145,6 +148,7 @@ export component UserWindow inherits Window {
             height: 30px;
         }
 
+
         ScrollView {
             VerticalLayout {
                 spacing: 10px;
@@ -173,19 +177,25 @@ export component UserWindow inherits Window {
                 }
             }
         }
-
+    
         Rectangle {
-        vertical-stretch: 1;
-    }
+            vertical-stretch: 1;
+        }
+    
+        LineEdit {
+            text <=> root.delete_task;
+            placeholder-text: "Task id to delete";
+            height: 45px;
+        }
+    
+        Button {
+            text: "Delete task";
+            height: 45px;
+            clicked => {
+                root.delete_task_clicked();
+            }
+        }
 
-    LineEdit {
-        placeholder-text: "Task id to delete";
-        height: 45px;
-    }
-
-    Button {
-        text: "Delete task";
-        height: 45px;
-    }
+        
     }
 }
