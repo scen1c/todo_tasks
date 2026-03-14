@@ -1,162 +1,107 @@
-# 🦀 Todo Tasks — Rust Client-Server Application
+# 🦀 Todo Tasks
 
-> Full client-server Todo application built with Rust, Axum and PostgreSQL  
-> Author: **scen1c**
+A small **client‑server Todo application written in Rust**.
 
----
+This repository is a learning project demonstrating how to build a full backend stack in Rust:
 
-# 📌 Project Overview
+- REST API with **Axum**
+- PostgreSQL database with **SQLx**
+- **JWT authentication**
+- CLI client using **Reqwest**
+- Docker environment for PostgreSQL
 
-**Todo Tasks** is a workspace-based Rust project that implements:
-
-- REST API server (Axum)
-- PostgreSQL database (SQLx)
-- JWT authentication
-- CLI client (Reqwest)
-- Dockerized database setup
-
-This project was created as a pet-project to deeply understand backend architecture in Rust.
+The project is structured as a **Rust workspace** containing a server, CLI client, and experimental GUI client.
 
 ---
 
 # 🏗 Project Structure
 
 ```
-todo_tasks/
+todo_tasks
 │
-├── server/              # Axum REST API
-│   ├── src/
-│   └── .env
+├ client/          # CLI client application
+├ server/          # Axum REST API server
+├ slint-cli/       # GUI client using Slint (work in progress)
 │
-├── client/              # CLI client (reqwest)
-│   └── src/
+├ migrations/      # SQL database migrations
+├ .sqlx/           # SQLx query metadata
 │
-├── docker-compose.yml   # PostgreSQL + pgAdmin
-└── Cargo.toml           # Workspace config
+├ docker-compose.yml
+├ Cargo.toml       # workspace definition
+└ README.md
 ```
 
 ---
 
-# 🐳 Full Setup Guide
+# ⚙️ Technologies
 
-## 1️⃣ Install Requirements
+## Server
 
-Make sure you have installed:
+- Rust
+- Axum
+- Tokio
+- SQLx
+- PostgreSQL
+- jsonwebtoken
+- dotenvy
 
-- Rust (https://rustup.rs)
-- Docker
-- Docker Compose
+## Clients
 
-Check versions:
+### CLI Client
 
-```
-rustc --version
-docker --version
-```
+- reqwest
+- tokio
+- serde
 
----
+### GUI Client (WIP)
 
-## 2️⃣ Start PostgreSQL via Docker
-
-From project root:
-
-```
-docker compose up -d
-```
-
-This will start:
-
-- PostgreSQL → localhost:5432
-- pgAdmin → http://localhost:5050
+- Slint UI framework
 
 ---
 
-## 3️⃣ Configure Environment Variables
+# 🗄 Database Schema
 
-Create a `.env` file inside the `server/` directory.
-
-Example:
+Defined in:
 
 ```
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/todo_db
-JWT_SECRET=super_secret_key
+migrations/20260313070204_init_schema.sql
 ```
 
-⚠ Make sure credentials match docker-compose configuration.
-
----
-
-## 4️⃣ Create Database Tables
-
-You can either:
-
-### Option A: Use pgAdmin
-
-Open http://localhost:5050
-
-Create database: `todo_db`
-
-Create tables manually:
+### Users
 
 ```sql
 CREATE TABLE users (
     name TEXT PRIMARY KEY,
     password TEXT NOT NULL
 );
+```
 
+### Tasks
+
+```sql
 CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
-    completed BOOLEAN DEFAULT FALSE,
-    user_name TEXT REFERENCES users(name)
+    complited BOOLEAN NOT NULL DEFAULT FALSE,
+    user_name TEXT NOT NULL REFERENCES users(name)
 );
 ```
 
----
-
-## 5️⃣ Run The Server
-
-```
-cd server
-cargo run
-```
-
-Server will run on:
-
-```
-http://127.0.0.1:3000
-```
-
-Health check:
-
-```
-GET http://127.0.0.1:3000/alive
-```
+Each task belongs to a user.
 
 ---
 
-## 6️⃣ Run The Client
+# 🌐 API
 
-Open a new terminal:
+Server runs on
 
 ```
-cd client
-cargo run
+http://127.0.0.1:3030
 ```
 
-The CLI will allow you to:
+## Public endpoints
 
-- Register user
-- Login
-- Create task
-- List tasks (if implemented)
-- Finish task (if implemented)
-
----
-
-# 📡 API Documentation
-
-## Health Check
+### Health check
 
 ```
 GET /alive
@@ -164,12 +109,15 @@ GET /alive
 
 ---
 
-## Register
+### Register
 
 ```
 POST /auth/register
-Content-Type: application/json
+```
 
+Body:
+
+```json
 {
   "name": "username",
   "password": "password"
@@ -178,99 +126,244 @@ Content-Type: application/json
 
 ---
 
-## Login
+### Login
 
 ```
 POST /auth/login
-Content-Type: application/json
-
-{
-  "name": "username",
-  "password": "password"
-}
 ```
 
 Response:
 
-```
+```json
 {
-  "token": "JWT_TOKEN"
+  "access_token": "JWT_TOKEN",
+  "token_type": "Bearer"
 }
-```
-
----
-
-## Create Task
-
-```
-POST /task
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "Learn Rust"
-}
-```
-
----
-
-## List Tasks
-
-```
-GET /list
-Authorization: Bearer <token>
 ```
 
 ---
 
 # 🔐 Authentication
 
-- JWT-based authentication
-- Token lifetime: ~30 minutes
-- Authorization header required for protected routes
-
-Format:
+Protected endpoints require header:
 
 ```
 Authorization: Bearer <token>
 ```
 
+JWT is generated on login and validated by the server middleware.
+
 ---
 
-# 🧠 Learning Objectives
+# 📋 Task Endpoints
+
+### Create task
+
+```
+POST /task
+```
+
+Body
+
+```json
+{
+  "title": "learn rust"
+}
+```
+
+---
+
+### List tasks
+
+```
+GET /list
+```
+
+Returns all tasks belonging to the authenticated user.
+
+Example:
+
+```json
+{
+  "tasks": [
+    {
+      "id": 1,
+      "title": "learn rust",
+      "complited": false,
+      "user_name": "user"
+    }
+  ]
+}
+```
+
+---
+
+### Finish task
+
+```
+POST /task/finish
+```
+
+Marks a task as completed.
+
+---
+
+### Delete task
+
+```
+POST /task/delete
+```
+
+Removes a task from the database.
+
+---
+
+# 🐳 Running the Project
+
+## 1 Clone repository
+
+```
+git clone https://github.com/scen1c/todo_tasks.git
+cd todo_tasks
+```
+
+---
+
+## 2 Start PostgreSQL
+
+```
+docker compose up -d
+```
+
+Services:
+
+| Service | Address |
+|--------|--------|
+| Postgres | localhost:5432 |
+| pgAdmin | http://localhost:5050 |
+
+Database configuration:
+
+```
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=1234
+POSTGRES_DB=tasks_db
+```
+
+---
+
+## 3 Environment variables
+
+Create file:
+
+```
+server/.env
+```
+
+Example:
+
+```
+DATABASE_URL=postgres://postgres:1234@localhost:5432/tasks_db
+SECRET=super_secret_key
+```
+
+---
+
+## 4 Run migrations
+
+Install SQLx CLI:
+
+```
+cargo install sqlx-cli --no-default-features --features postgres
+```
+
+Run migrations:
+
+```
+sqlx migrate run
+```
+
+---
+
+## 5 Run server
+
+```
+cd server
+cargo run
+```
+
+Server starts on:
+
+```
+127.0.0.1:3030
+```
+
+---
+
+## 6 Run CLI client
+
+```
+cd client
+cargo run
+```
+
+---
+
+# 💻 CLI Usage
+
+After starting the CLI client you can:
+
+```
+1 register
+2 login
+3 create task
+4 list tasks
+5 finish task
+6 delete task
+```
+
+The client communicates with the server using HTTP requests.
+
+---
+
+# 🎯 Learning Goals
 
 This project demonstrates:
 
-- Async Rust (Tokio)
+- Rust workspaces
 - REST API with Axum
+- async programming with Tokio
+- JWT authentication
 - PostgreSQL integration with SQLx
-- JWT authentication flow
-- Dockerized development
-- Workspace architecture
-- CLI ↔ API communication
+- CLI client interacting with an API
+- Dockerized development environment
 
 ---
 
-# 🚀 Future Improvements
+# 🚧 Future Improvements
 
-- Password hashing (bcrypt or argon2)
-- Refresh tokens
-- Proper user_id foreign keys instead of user_name
-- Middleware-based authentication layer
-- Structured logging (tracing)
-- Integration tests
-- Full Dockerization (server + db)
-- Migrations via sqlx-cli
+Possible improvements for the project:
 
----
-
-# ⭐ Author
-
-GitHub: https://github.com/scen1c
+- use `user_id` instead of `user_name`
+- finish tasks by `id`
+- add task update endpoint
+- add pagination for tasks
+- improve error handling
+- integration tests
+- better CLI UX
+- finish Slint GUI client
 
 ---
 
-# 📜 License
+# 👨‍💻 Author
 
-This project is created for educational purposes.
+GitHub
+
+```
+https://github.com/scen1c
+```
+
+---
+
+⭐ If you like the project — give it a star
 
