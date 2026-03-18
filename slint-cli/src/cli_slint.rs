@@ -3,15 +3,15 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::reqwest_functions as rf;
-use crate::{RegisterWindow, UserWindow, WelcomeWindow};
+use crate::{RegisterWindow, UserWindow, WelcomeWindow, TaskItem};
 
 use slint::ComponentHandle;
-use slint::{ModelRc, SharedString, VecModel};
+use slint::{ModelRc, VecModel};
 
 thread_local! {
     static USER_WINDOW_HOLDER: RefCell<Option<UserWindow>> = RefCell::new(None);
     static REGISTER_WINDOW_HOLDER: RefCell<Option<RegisterWindow>> = RefCell::new(None);
-    static TASKS_MODEL_HOLDER: RefCell<Option<Rc<VecModel<SharedString>>>> = RefCell::new(None);
+    static TASKS_MODEL_HOLDER: RefCell<Option<Rc<VecModel<TaskItem>>>> = RefCell::new(None);
 }
 
 pub fn beginprogram(client: Client, app: &WelcomeWindow) {
@@ -26,12 +26,15 @@ pub fn beginprogram(client: Client, app: &WelcomeWindow) {
         let name = app.get_login_text().to_string();
         let password = app.get_password_text().to_string();
 
+        let login_name = name.clone(); // для запроса
+        let ui_name = name.clone();    // для окна
+
         let client = login_client.clone();
         let app_weak_inner = app.as_weak();
 
         tokio::spawn(async move {
             let result: Result<rf::LoginResponse, String> =
-                rf::login_user(client.clone(), name, password).await;
+                rf::login_user(client.clone(), login_name, password).await;
 
             match result {
                 Ok(data) => {
@@ -41,7 +44,7 @@ pub fn beginprogram(client: Client, app: &WelcomeWindow) {
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(app) = app_weak_inner.upgrade() {
                             app.set_status_text("Login successful".into());
-                            open_user_panel(client_for_ui, token, &app);
+                            open_user_panel(client_for_ui, token, &app, ui_name);
                         }
                     });
                 }
@@ -80,11 +83,11 @@ pub fn open_register_window(client: Client, _welcome_app: &WelcomeWindow) {
     });
 }
 
-pub fn open_user_panel(client: Client, token: String, welcome_app: &WelcomeWindow) {
+pub fn open_user_panel(client: Client, token: String, welcome_app: &WelcomeWindow, name: String) {
     let window = UserWindow::new().unwrap();
     let window_weak = window.as_weak();
 
-    let tasks_model = Rc::new(VecModel::<SharedString>::default());
+    let tasks_model = Rc::new(VecModel::<TaskItem>::default());
     window.set_tasks(ModelRc::from(tasks_model.clone()));
 
     TASKS_MODEL_HOLDER.with(|slot| {
@@ -143,6 +146,44 @@ pub fn open_user_panel(client: Client, token: String, welcome_app: &WelcomeWindo
         });
     });
 
+    let client_for_checkbox = client.clone();
+    let token_for_checkbox = token.clone();
+    let window_for_checkbox = window_weak.clone();
+
+    window.on_checkbox_clicked(move |title, checked| {
+    let client = client_for_checkbox.clone();
+    let token = token_for_checkbox.clone();
+    let app_weak = window_for_checkbox.clone();
+
+    tokio::spawn(async move {
+        let result = rf::finish_task(client, token.clone(), title.to_string(), checked).await;
+
+        match result {
+            Ok(_) => {
+                let reload_result = load_tasks_into_model(token.clone()).await;
+
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(app) = app_weak.upgrade() {
+                        match reload_result {
+                            Ok(_) => app.set_status_text("Task updated".into()),
+                            Err(err) => app.set_status_text(
+                                format!("Updated, but refresh failed: {}", err).into()
+                            ),
+                        }
+                    }
+                });
+            }
+            Err(err) => {
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(app) = app_weak.upgrade() {
+                        app.set_status_text(format!("Failed to update task: {}", err).into());
+                    }
+                });
+            }
+        }
+    });
+});
+
     let client_for_delete = client.clone();
     let token_for_delete = token.clone();
     let window_for_delete = window_weak.clone();
@@ -191,6 +232,8 @@ pub fn open_user_panel(client: Client, token: String, welcome_app: &WelcomeWindo
            }
         });
     });
+
+    window.set_username(name.into());
 
     window.show().unwrap();
 
@@ -261,10 +304,14 @@ pub fn setup_register_window_logic(client: Client, register_app: &RegisterWindow
 pub async fn load_tasks_into_model(token: String) -> Result<(), reqwest::Error> {
     let data: rf::ListTaskResponse = rf::get_tasks(&token).await?;
 
-    let tasks: Vec<SharedString> = data
+    let tasks: Vec<TaskItem> = data
     .tasks
     .into_iter()
-    .map(|t| SharedString::from(format!("{}: {}", t.id, t.title)))
+    .map(|t| TaskItem {
+        id: t.id,
+        title: t.title.into(),
+        completed: t.completed,
+    })
     .collect();
 
     let _ = slint::invoke_from_event_loop(move || {

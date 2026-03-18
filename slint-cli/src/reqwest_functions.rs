@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 pub struct Task {
     pub id: i32,
     pub title: String,
-    completed: bool,
+    pub completed: bool,
     user_name: String
 }
 
@@ -156,64 +156,29 @@ pub async fn delete_task(client: Client, jwt_token_access: String, id: String) -
     }
 }
 
-/*pub async fn finish_task_cli(client: Client, jwt: LoginResponse) {
-    let title = read_line("Which task didu finish td?: ");
-    let body = FinishTaskRequest {
-        title
-    };
+pub async fn finish_task(
+    client: Client,
+    jwt_token_access: String,
+    title: String,
+    _checked: bool,
+) -> Result<bool, String> {
+    let body = FinishTaskRequest { title };
+
     let response = client
         .post("http://127.0.0.1:3030/task/finish")
-        .bearer_auth(&jwt.access_token)
+        .bearer_auth(&jwt_token_access)
         .json(&body)
         .send()
         .await;
+
     match response {
         Ok(resp) => {
             if resp.status().is_success() {
-                let text = resp.text()
-                    .await
-                    .unwrap();
-                println!("Task finished successfully! Code: {text}")
+                Ok(true)
             } else {
-                println!("Server returned an err {}", resp.status());
-                let text = resp.text().await.unwrap();
-                println!("Error body: {}", text)
+                Err(format!("Finish failed: {}", resp.status()))
             }
-        },
-        Err(err) => {
-            println!("Request failed: {}", err)
         }
+        Err(err) => Err(format!("Request failed: {}", err)),
     }
 }
-
-pub async fn delete_task_cli(client: Client, jwt: LoginResponse) {
-    let id = read_line("Which task want u delete? Please write id of the task: ");
-    let id: i32 = id.parse().unwrap();
-    let body = DeleteTaskRequest {
-        id
-    };
-    let response = client
-        .post("http://127.0.0.1:3030/task/delete")
-        .bearer_auth(&jwt.access_token)
-        .json(&body)
-        .send()
-        .await;
-    match response {
-        Ok(resp) => {
-            if resp.status().is_success() {
-                let text = resp.text()
-                    .await
-                    .unwrap();
-                println!("Task successfully deleted! Code: {}", text);
-                
-            } else {
-                println!("Server returned an err: {}", resp.status());
-                let text = resp.text().await.unwrap();
-                println!("Error body: {}", text);
-            }
-        },
-        Err(err) => {
-            println!("Request failed : {}", err)
-        }
-    }
-}*/

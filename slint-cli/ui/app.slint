@@ -103,25 +103,34 @@ export component RegisterWindow inherits Window {
 
 import { VerticalBox, LineEdit, Button, ScrollView, CheckBox } from "std-widgets.slint";
 
+export struct TaskItem {
+    id: int,
+    title: string,
+    completed: bool,
+}
+
 export component UserWindow inherits Window {
     width: 700px;
     height: 750px;
     background: #3e3e3e;
-    title: "Tasks";
+    title: "Tasks of Ahmed";
 
     in-out property <string> create_task;
-    in property <[string]> tasks: ["Tatat", "asd", "asdasd", "itit"];
+    in property <[TaskItem]> tasks;
     in-out property <string> status_text;
     in-out property <string> delete_task;
+    in property <string> username;
+
     callback create_task_clicked();
     callback delete_task_clicked();
+    callback checkbox_clicked(string, bool);
 
     VerticalLayout {
         padding: 20px;
         spacing: 12px;
 
         Text {
-            text: "Tasks";
+            text: "Tasks of " + root.username;
             font-size: 20px;
             horizontal-alignment: center;
             height: 40px;
@@ -148,7 +157,6 @@ export component UserWindow inherits Window {
             height: 30px;
         }
 
-
         ScrollView {
             VerticalLayout {
                 spacing: 10px;
@@ -163,12 +171,16 @@ export component UserWindow inherits Window {
                         spacing: 10px;
 
                         CheckBox {
-                            checked: false;
+                            checked: task.completed;
                             vertical-stretch: 0;
+
+                            toggled => {
+                                root.checkbox_clicked(task.title, self.checked);
+                            }
                         }
 
                         Text {
-                            text: task;
+                            text: task.id + ": " + task.title;
                             color: #ffffff;
                             vertical-alignment: center;
                             horizontal-stretch: 1;
@@ -177,17 +189,17 @@ export component UserWindow inherits Window {
                 }
             }
         }
-    
+
         Rectangle {
             vertical-stretch: 1;
         }
-    
+
         LineEdit {
             text <=> root.delete_task;
             placeholder-text: "Task id to delete";
             height: 45px;
         }
-    
+
         Button {
             text: "Delete task";
             height: 45px;
@@ -195,7 +207,5 @@ export component UserWindow inherits Window {
                 root.delete_task_clicked();
             }
         }
-
-        
     }
 }
