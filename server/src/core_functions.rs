@@ -129,15 +129,24 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_task() {
-        let pool = get_pool().await;
-        let title = format!("test_task_for_del_{}", rand::random::<u32>());
-        let user_name = "test_user";
+    let pool = get_pool().await;
+    let title = format!("test_task_for_del_{}", rand::random::<u32>());
+    let user_name = "test_user";
 
-        create_task(&pool, &title, &user_name).await.unwrap();
-        let list_check = list_tasks(&pool, &user_name).await.unwrap();
-        let list = list_check.clone().into_iter().find(|a| a.title == title).unwrap();
-        
-        delete_task(&pool, &list.id, &user_name);
-        assert!(list_check.iter().any(|a| a.title == title))
-    }
+    create_task(&pool, &title, &user_name).await.unwrap();
+
+    let list_before = list_tasks(&pool, &user_name).await.unwrap();
+    let task = list_before
+        .iter()
+        .find(|a| a.title == title)
+        .unwrap();
+
+    delete_task(&pool, &task.id, &user_name).await.unwrap();
+
+    let list_after = list_tasks(&pool, &user_name).await.unwrap();
+
+    let exists = list_after.iter().any(|a| a.title == title);
+
+    assert!(!exists);
+}
 }
