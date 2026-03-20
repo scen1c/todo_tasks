@@ -26,8 +26,8 @@ pub fn beginprogram(client: Client, app: &WelcomeWindow) {
         let name = app.get_login_text().to_string();
         let password = app.get_password_text().to_string();
 
-        let login_name = name.clone(); // для запроса
-        let ui_name = name.clone();    // для окна
+        let login_name = name.clone();
+        let ui_name = name.clone();    
 
         let client = login_client.clone();
         let app_weak_inner = app.as_weak();
@@ -79,7 +79,11 @@ pub fn open_register_window(client: Client, _welcome_app: &WelcomeWindow) {
     window.show().unwrap();
 
     REGISTER_WINDOW_HOLDER.with(|slot| {
-        *slot.borrow_mut() = Some(window);
+        if let Ok(mut reg_win) = slot.try_borrow_mut() {
+            *reg_win = Some(window);
+        } else {
+            eprintln!("Failed to open register window")
+        }
     });
 }
 
@@ -91,7 +95,11 @@ pub fn open_user_panel(client: Client, token: String, welcome_app: &WelcomeWindo
     window.set_tasks(ModelRc::from(tasks_model.clone()));
 
     TASKS_MODEL_HOLDER.with(|slot| {
-        *slot.borrow_mut() = Some(tasks_model);
+        if let Ok(mut cell) = slot.try_borrow_mut() {
+            *cell = Some(tasks_model);
+        } else {
+        eprintln!("Failed to borrow TASKS_MODEL_HOLDER");
+        }
     });
 
     setup_user_window_logic(token.clone());
@@ -238,7 +246,11 @@ pub fn open_user_panel(client: Client, token: String, welcome_app: &WelcomeWindo
     window.show().unwrap();
 
     USER_WINDOW_HOLDER.with(|slot| {
-        *slot.borrow_mut() = Some(window);
+        if let Ok(mut rel_win) = slot.try_borrow_mut() {
+            *rel_win = Some(window); 
+        } else {
+            eprintln!("Failed to reload window")
+        }
     });
 
     welcome_app.hide().unwrap();
@@ -316,8 +328,13 @@ pub async fn load_tasks_into_model(token: String) -> Result<(), reqwest::Error> 
 
     let _ = slint::invoke_from_event_loop(move || {
         TASKS_MODEL_HOLDER.with(|slot| {
-            if let Some(model) = slot.borrow().as_ref() {
-                model.set_vec(tasks);
+            
+            if let Ok(cell) = slot.try_borrow() {
+                if let Some(model) = cell.as_ref() {
+                    model.set_vec(tasks);
+                }
+            } else {
+                eprintln!("Failed to load tasks")
             }
         });
     });
